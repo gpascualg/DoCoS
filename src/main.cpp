@@ -14,7 +14,6 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "linmath.h"
 
 #include <iostream>
 
@@ -194,7 +193,6 @@ public:
         {
             float ratio;
             int width, height;
-            mat4x4 m, p, mvp;
     
             glfwGetFramebufferSize(_window, &width, &height);
             ratio = width / (float) height;

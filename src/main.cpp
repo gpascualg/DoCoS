@@ -25,12 +25,6 @@ class X : public entity<X>
 public:
     void construct()
     {}
-
-    void update()
-    {
-        xc = xc * (xc + 1);
-        std::cout << "UPDATE X" << std::endl;
-    }
 };
 
 
@@ -100,9 +94,6 @@ public:
         {
             exit(EXIT_FAILURE);
         }
-
-        GLuint vertex_buffer, vertex_shader, fragment_shader;
-        GLint vpos_location, vcol_location;
     
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -201,8 +192,9 @@ public:
             glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             glClearDepth(1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
+        
             executor->update(updater);
+            executor->update(updater, 5);
             executor->execute_tasks();
             executor->draw(updater);
     

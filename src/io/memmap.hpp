@@ -2,6 +2,10 @@
 
 #include <optional>
 
+#ifdef _WIN32
+    #include <Windows.h>
+#endif
+
 
 struct file_mapping
 {

@@ -25,7 +25,7 @@ GLuint program::attach(GLenum type, std::filesystem::path path)
 
 GLuint program::compile(GLenum type, const std::filesystem::path& path)
 {
-    auto file_mapping = map_file(path.c_str());
+    auto file_mapping = map_file(path.string().c_str());
     if (!file_mapping)
     {
         return 0;

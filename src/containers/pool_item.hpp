@@ -8,7 +8,7 @@
 template <typename T>
 class pool_item
 {
-    template <poolable D, typename E, uint16_t I, typename R> friend class pooled_static_vector;
+    template <typename D, typename E, uint16_t I, typename R> friend class pooled_static_vector;
 
 public:
     pool_item();

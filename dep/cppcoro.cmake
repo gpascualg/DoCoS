@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.5)
 
-
 project(cppcoro)
+
+set(EXTRA_SOURCES )
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(EXTRA_SOURCES lib/win32.cpp)
+endif()
 
 add_library(cppcoro lib/ipv4_address.cpp
     lib/cancellation_registration.cpp
@@ -21,11 +25,14 @@ add_library(cppcoro lib/ipv4_address.cpp
     lib/spin_wait.cpp
     lib/ip_address.cpp
     lib/cancellation_state.cpp
+    ${EXTRA_SOURCES}
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(cppcoro PUBLIC -fcoroutines-ts -stdlib=libc++)
     target_link_options(cppcoro INTERFACE -stdlib=libc++ -lc++abi -lstdc++)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(cppcoro PUBLIC /await)
 endif()
 
 target_include_directories(cppcoro

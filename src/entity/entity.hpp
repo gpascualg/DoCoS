@@ -11,7 +11,7 @@
 template <typename derived_t>
 class entity : public pool_item<entity<derived_t>>
 {
-    template <poolable D, typename E, uint16_t I, typename R> friend class pooled_static_vector;
+    template <typename D, typename E, uint16_t I, typename R> friend class pooled_static_vector;
     template <typename... types> friend class updater;
     friend class executor;
 

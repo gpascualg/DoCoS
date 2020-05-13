@@ -36,7 +36,7 @@ std::optional<file_mapping> map_file(const char* filepath)
             return {};
         }
     #else
-        file_mapping.hfile = CreateFile(filepath, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+        file_mapping.hfile = CreateFileA(filepath, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
         if (file_mapping.hfile == INVALID_HANDLE_VALUE)
         {
             return {};
@@ -74,8 +74,8 @@ void unmap_file(const file_mapping& fp)
         munmap((void*)fp.addr, fp.length);
         close(fp.fd);
     #else
-        UnmapViewOfFile(fp->addr);
-        CloseHandle(fp->map_handle);
-        CloseHandle(fp->hfile);
+        UnmapViewOfFile(fp.addr);
+        CloseHandle(fp.map_handle);
+        CloseHandle(fp.hfile);
     #endif
 }

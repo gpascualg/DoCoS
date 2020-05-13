@@ -13,12 +13,12 @@
 #include <boost/range/join.hpp>
 
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
-class pooled_static_vector;
+//template <typename T, typename B, uint16_t InitialSize, typename Track>
+//class pooled_static_vector;
 
 
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track=void>
+template <typename T, typename B, uint16_t InitialSize, typename Track=void>
 class pooled_static_vector
 {
     template <typename... D> friend class scheme;
@@ -71,7 +71,7 @@ private:
 };
 
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 pooled_static_vector<T, B, InitialSize, Track>::pooled_static_vector() :
     _objects(),
     _pool(sizeof(T))
@@ -80,13 +80,13 @@ pooled_static_vector<T, B, InitialSize, Track>::pooled_static_vector() :
     _end = &_objects[0] + InitialSize;
 }
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 pooled_static_vector<T, B, InitialSize, Track>::~pooled_static_vector()
 {
     clear();
 }
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 template <typename... Args>
 void pooled_static_vector<T, B, InitialSize, Track>::clear(Args&&... args)
 {
@@ -107,7 +107,7 @@ void pooled_static_vector<T, B, InitialSize, Track>::clear(Args&&... args)
     _extra.clear();
 }
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 template <typename... Args>
 T* pooled_static_vector<T, B, InitialSize, Track>::alloc(Args&&... args)
 {
@@ -136,7 +136,7 @@ T* pooled_static_vector<T, B, InitialSize, Track>::alloc(Args&&... args)
     return object;
 }
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 template <typename... Args>
 void pooled_static_vector<T, B, InitialSize, Track>::free(T* object, Args&&... args)
 {
@@ -156,31 +156,31 @@ void pooled_static_vector<T, B, InitialSize, Track>::free(T* object, Args&&... a
     free_impl(object);
 }
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 inline bool pooled_static_vector<T, B, InitialSize, Track>::is_static(T* object) const
 {
     return (object < _end) && (object >= &_objects[0]);
 }
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 inline bool pooled_static_vector<T, B, InitialSize, Track>::is_static_full() const
 {
     return _current == _end;
 }
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 inline bool pooled_static_vector<T, B, InitialSize, Track>::empty() const
 {
     return _current == &_objects[0];
 }
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 inline size_t pooled_static_vector<T, B, InitialSize, Track>::size() const
 {
     return _current - &_objects[0] + _extra.size();
 }
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 template <uint16_t OtherSize, typename R>
 T* pooled_static_vector<T, B, InitialSize, Track>::move_impl(T* object, pooled_static_vector<T, B, OtherSize, R>& to)
 {
@@ -190,7 +190,7 @@ T* pooled_static_vector<T, B, InitialSize, Track>::move_impl(T* object, pooled_s
     return new_object;
 }
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 T* pooled_static_vector<T, B, InitialSize, Track>::move_impl(T* object)
 {
     // Insert in new location
@@ -213,7 +213,7 @@ T* pooled_static_vector<T, B, InitialSize, Track>::move_impl(T* object)
 }
 
 
-template <poolable T, typename B, uint16_t InitialSize, typename Track>
+template <typename T, typename B, uint16_t InitialSize, typename Track>
 void pooled_static_vector<T, B, InitialSize, Track>::free_impl(T* object)
 {
     // Remove from current pool

@@ -14,7 +14,10 @@ Executable will be found at
 
 ## Tested with
 
-Builds with 11.0 and libc++. Should work with any compile as long as it has support for
+* Clang 11.0 and libc++. 
+* Visual Studio 2019 16.5.5
+
+Should work with any compile as long as it has support for
 
 * Coroutines TS
 * Conceps TS

@@ -10,6 +10,9 @@ add_library(docos_core STATIC
     entity/entity.hpp
     entity/scheme.hpp
     entity/transform.hpp
+    fiber/spinlock.hpp
+    fiber/exclusive_work_stealing.hpp
+    fiber/exclusive_work_stealing.cpp
     gx/camera/camera.hpp
     gx/camera/camera.cpp
     gx/mesh/mesh.hpp

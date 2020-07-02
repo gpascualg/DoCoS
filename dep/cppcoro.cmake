@@ -33,6 +33,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_link_options(cppcoro INTERFACE -stdlib=libc++ -lc++abi -lstdc++)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options(cppcoro PUBLIC /await)
+    target_link_libraries(cppcoro PUBLIC synchronization.lib)
 endif()
 
 target_include_directories(cppcoro

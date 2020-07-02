@@ -4,17 +4,17 @@
 #include <type_traits>
 
 
-template <class Haystack, class Needle>
+template <template <typename...> typename C, class Haystack, class Needle>
 struct contains;
 
-template <class Car, class... Cdr, class Needle>
-struct contains<std::tuple<Car, Cdr...>, Needle> : contains<std::tuple<Cdr...>, Needle>
+template <template <typename...> typename C, class Car, class... Cdr, class Needle>
+struct contains<C, C<Car, Cdr...>, Needle> : contains<C, C<Cdr...>, Needle>
 {};
 
-template <class... Cdr, class Needle>
-struct contains<std::tuple<Needle, Cdr...>, Needle> : std::true_type
+template <template <typename...> typename C, class... Cdr, class Needle>
+struct contains<C, C<Needle, Cdr...>, Needle> : std::true_type
 {};
 
-template <class Needle>
-struct contains<std::tuple<>, Needle> : std::false_type
+template <template <typename...> typename C, class Needle>
+struct contains<C, C<>, Needle> : std::false_type
 {};

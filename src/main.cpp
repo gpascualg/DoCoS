@@ -2,6 +2,7 @@
 #include "containers/dictionary.hpp"
 #include "entity/entity.hpp"
 #include "entity/scheme.hpp"
+#include "fiber/exclusive_work_stealing.hpp"
 #include "gx/camera/camera.hpp"
 #include "gx/mesh/mesh.hpp"
 #include "gx/shader/program.hpp"
@@ -9,6 +10,9 @@
 #include "updater/updater.hpp"
 
 #include <cppcoro/sync_wait.hpp>
+
+#include <boost/fiber/mutex.hpp>
+#include <boost/fiber/condition_variable.hpp>
 
 #include <glm/gtx/string_cast.hpp>
 
@@ -86,8 +90,9 @@ class quick_test
 
 public:
     quick_test() :
-        obj_scheme(obj_scheme.make()),
-        camera_scheme(camera_scheme.make())
+        store(),
+        obj_scheme(obj_scheme.make(store)),
+        camera_scheme(camera_scheme.make(store))
     {
         glfwSetErrorCallback(error_callback);
         if (!glfwInit())
@@ -138,8 +143,8 @@ public:
 
     void run()
     {
-        auto executor = ::executor::get();
-        auto overlap_scheme = overlap(obj_scheme, camera_scheme);
+        auto executor = new ::executor();
+        auto overlap_scheme = overlap(store, obj_scheme, camera_scheme);
         auto updater = overlap_scheme.make_updater(std::thread::hardware_concurrency());
 
         executor->create_with_callback(camera_scheme, [](auto camera){
@@ -204,6 +209,7 @@ public:
  
         glfwDestroyWindow(_window);
         glfwTerminate();
+        delete executor;
     }
 
 private:
@@ -212,16 +218,115 @@ private:
     program _program;
 
     // Prebuilt schemes
-    decltype(scheme<dic<X>, dic<transform>, dic<mesh>>::make()) obj_scheme;
-    decltype(scheme<dic<camera, 1>>::make()) camera_scheme;
+    scheme_store<dic<X>, dic<transform>, dic<mesh>, dic<camera, 1>> store;
+    decltype(scheme<X, transform, mesh>::make(store)) obj_scheme;
+    decltype(scheme<camera>::make(store)) camera_scheme;
 };
 
+void sub_fiber(int id)
+{
+    auto h = std::hash<decltype(std::this_thread::get_id())>()(std::this_thread::get_id());
+    std::cout << (std::string("SUBFIBER ") + std::to_string(id) + " THREAD " +std::to_string(h) + "\n");
 
+    auto ctx = boost::fibers::context::active();
+    reinterpret_cast<exclusive_work_stealing*>(ctx->get_scheduler())->start_bundle();
+
+    int num_fibers = 0;
+    boost::fibers::mutex mtx;
+    boost::fibers::condition_variable_any cv{};
+
+    for (int i = 0; i < 5; ++i)
+    {
+        ++num_fibers;
+
+        boost::fibers::fiber([id, i, &mtx, &cv, &num_fibers]() {
+            auto h = std::hash<decltype(std::this_thread::get_id())>()(std::this_thread::get_id());
+            std::cout << "Pre yield\n";
+            boost::this_fiber::sleep_for(std::chrono::seconds(2));
+            std::cout << (std::string("SUBFIBER ") + std::to_string(id) + std::string("STEP ") + std::to_string(i) + " THREAD " + std::to_string(h) + "\n");
+
+            mtx.lock();
+            --num_fibers;
+            mtx.unlock();
+            if (0 == num_fibers)
+            {
+                cv.notify_all();
+            }
+        }).detach();
+    }
+
+    reinterpret_cast<exclusive_work_stealing*>(ctx->get_scheduler())->end_bundle();
+
+    mtx.lock();
+    cv.wait(mtx, [&num_fibers]() { return 0 == num_fibers; });
+    mtx.unlock();
+}
+
+void main_fiber()
+{
+    int num_fibers = 0;
+    boost::fibers::mutex mtx;
+    boost::fibers::condition_variable_any cv{};
+
+    for (int i = 0; i < 2; ++i)
+    {
+        ++num_fibers;
+
+        boost::fibers::fiber([i, &mtx, &cv, &num_fibers]() {
+            sub_fiber(i); 
+
+            mtx.lock();
+            --num_fibers;
+            mtx.unlock();
+            if (0 == num_fibers)
+            {
+                cv.notify_all();
+            }
+        }).detach();
+    }
+
+    mtx.lock();
+    cv.wait(mtx, [&num_fibers]() { return 0 == num_fibers; });
+    mtx.unlock();
+
+    std::cout << "-------------------------------------------------------" << std::endl;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        boost::fibers::fiber([i]() { sub_fiber(i); }).detach();
+    }
+
+    while (true)
+    {
+        boost::this_fiber::yield();
+    }
+}
 
 int main()
 {
-    quick_test test;
-    test.run();
+    //quick_test test;
+    //test.run();
+    // create fibers with tasks
+
+    boost::fibers::mutex mtx;
+    boost::fibers::condition_variable_any cv;
+    // start wotrker-thread first
+    auto worker = std::thread(
+        [&mtx, &cv] {
+            boost::fibers::use_scheduling_algorithm<exclusive_work_stealing>(2);
+            mtx.lock();
+            // suspend main-fiber from the worker thread
+            cv.wait(mtx);
+            mtx.unlock();
+        });
+    boost::fibers::use_scheduling_algorithm<exclusive_work_stealing>(2);
+
+    boost::fibers::fiber f{ []() { main_fiber(); } };
+    f.join();
+
+    // signal termination
+    cv.notify_all();
+    worker.join();
 
     return 0;
 }

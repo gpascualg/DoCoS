@@ -6,25 +6,25 @@
 #include <type_traits>
 
 
-template <class Out, class In>
+template <template <typename...> typename C, class Out, class In>
 struct filter;
 
-template <class... Out, class InCar, class... InCdr>
-struct filter<std::tuple<Out...>, std::tuple<InCar, InCdr...>>
+template <template <typename...> typename C, class... Out, class InCar, class... InCdr>
+struct filter<C, C<Out...>, C<InCar, InCdr...>>
 {
   using type = typename std::conditional<
-    contains<std::tuple<Out...>, InCar>::value
-    , typename filter<std::tuple<Out...>, std::tuple<InCdr...>>::type
-    , typename filter<std::tuple<Out..., InCar>, std::tuple<InCdr...>>::type
+    contains<C, C<Out...>, InCar>::value
+    , typename filter<C, C<Out...>, C<InCdr...>>::type
+    , typename filter<C, C<Out..., InCar>, C<InCdr...>>::type
   >::type;
 };
 
-template <class Out>
-struct filter<Out, std::tuple<>>
+template <template <typename...> typename C, class Out>
+struct filter<C, Out, C<>>
 {
   using type = Out;
 };
 
 
-template <class T>
-using without_duplicates = typename filter<std::tuple<>, T>::type;
+template <template <typename...> typename C, class T>
+using without_duplicates = typename filter<C, C<>, T>::type;

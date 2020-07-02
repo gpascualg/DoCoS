@@ -7,24 +7,15 @@
 
 
 
-
 template <typename... vectors>
 struct scheme;
 
+template <typename... vectors>
+struct scheme_store;
+
+
 namespace detail
 {
-    template <template <typename...> typename Tpl, typename... E> 
-    constexpr inline auto make_scheme_impl(scheme<E...> sch, Tpl<E...> unused)
-    {
-        return sch;
-    }
-
-    template <typename T>
-    struct scheme_store
-    {
-        inline static T component;
-    };
-
     template <typename component, typename... Args>
     struct scheme_arguments
     {
@@ -33,6 +24,23 @@ namespace detail
     };
 }
 
+
+template <typename... vectors>
+struct scheme_store
+{
+    template <typename T> using dic_t = typename base_dic<T, std::tuple<vectors...>>::type;
+
+    constexpr scheme_store()
+    {}
+
+    template <typename T>
+    constexpr inline T& get()
+    {
+        return std::get<T>(components);
+    }
+
+    std::tuple<vectors...> components;
+};
 
 template <typename... vectors>
 class scheme
@@ -77,35 +85,37 @@ public:
         };
     }
 
-    template <typename... T>
-    constexpr auto overlap(scheme<T...>& other)
+    template <typename... T, typename... D>
+    constexpr auto overlap(scheme_store<T...>& store, scheme<D...>& other)
     {
-        using W = without_duplicates<std::tuple<T..., vectors...>>;
-        return ::detail::make_scheme_impl({}, W{});
+        using W = without_duplicates<scheme, scheme<D..., vectors...>>;
+        return W{ store };
     }
 
-    static constexpr inline auto make()
+    template <typename... T>
+    static constexpr inline auto make(scheme_store<T...>& store)
     {
-        using W = without_duplicates<std::tuple<vectors...>>;
-        return ::detail::make_scheme_impl({}, W{});
+        using W = without_duplicates<scheme, scheme<scheme_store<T...>::dic_t<vectors>...>>;
+        return W{ store };
     }
 
 private:
-    constexpr scheme() :
-        components(detail::scheme_store<vectors>::component...)
+    template <typename... T>
+    constexpr scheme(scheme_store<T...>& store) :
+        components(store.get<vectors>()...)
     {}
 };
 
 
-template <typename A, typename B, typename... O>
-constexpr inline auto overlap(A&& a, B&& b, O&&... other)
+template <typename... T, typename A, typename B, typename... O>
+constexpr inline auto overlap(scheme_store<T...>& store, A&& a, B&& b, O&&... other)
 {
     if constexpr (sizeof...(other) == 0)
     {
-        return a.overlap(b);
+        return a.overlap(store, b);
     }
     else
     {
-        return overlap(a.overlap(b), std::forward<O>(other)...);
+        return overlap(store, a.overlap(b), std::forward<O>(other)...);
     }
 }

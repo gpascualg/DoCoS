@@ -18,13 +18,13 @@ public:
     static constexpr std::size_t buffer_size = 1024;
 
 public:
-    static executor* get()
+    executor() :
+        _sequencer(_barrier, buffer_size),
+        _next_to_read(0),
+        _current_id(0)
     {
-        if (!instance)
-        {
-            instance = new executor();
-        }
-        return instance;
+        // What if there is more than one executor?
+        instance = this;
     }
 
     template <typename C>
@@ -100,11 +100,6 @@ public:
     }
 
 private:
-    executor() : 
-        _sequencer(_barrier, buffer_size),
-        _next_to_read(0)
-    {}
-    
     uint64_t next_id()
     {
         if (!_free_ids.empty())

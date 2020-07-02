@@ -28,7 +28,7 @@ public:
     using derived_t = T;
 
 public:
-    pooled_static_vector();
+    constexpr pooled_static_vector();
     ~pooled_static_vector();
 
     template <typename... Args>
@@ -40,9 +40,9 @@ public:
     template <typename... Args>
     void free(T* object, Args&&... args);
 
-    inline bool is_static(T* object) const;
-    inline bool is_static_full() const;
-    inline bool empty() const;
+    constexpr inline bool is_static(T* object) const;
+    constexpr inline bool is_static_full() const;
+    constexpr inline bool empty() const;
     inline size_t size() const;
     
     inline auto range()
@@ -72,7 +72,7 @@ private:
 
 
 template <typename T, typename B, uint16_t InitialSize, typename Track>
-pooled_static_vector<T, B, InitialSize, Track>::pooled_static_vector() :
+constexpr pooled_static_vector<T, B, InitialSize, Track>::pooled_static_vector() :
     _objects(),
     _pool(sizeof(T))
 {
@@ -125,6 +125,7 @@ T* pooled_static_vector<T, B, InitialSize, Track>::alloc(Args&&... args)
     }   
     
     // Get ticket to this position
+    object->_ticket->_ptr = object;
     static_cast<B&>(*object).construct(std::forward<Args>(args)...);
 
     // Track it if necessary
@@ -150,26 +151,25 @@ void pooled_static_vector<T, B, InitialSize, Track>::free(T* object, Args&&... a
     // Destroy obect
     static_cast<B&>(*object).destroy(std::forward<Args>(args)...);
     object->_ticket->invalidate();
-    object->_ticket.reset();
 
     // Free memory
     free_impl(object);
 }
 
 template <typename T, typename B, uint16_t InitialSize, typename Track>
-inline bool pooled_static_vector<T, B, InitialSize, Track>::is_static(T* object) const
+constexpr inline bool pooled_static_vector<T, B, InitialSize, Track>::is_static(T* object) const
 {
     return (object < _end) && (object >= &_objects[0]);
 }
 
 template <typename T, typename B, uint16_t InitialSize, typename Track>
-inline bool pooled_static_vector<T, B, InitialSize, Track>::is_static_full() const
+constexpr inline bool pooled_static_vector<T, B, InitialSize, Track>::is_static_full() const
 {
     return _current == _end;
 }
 
 template <typename T, typename B, uint16_t InitialSize, typename Track>
-inline bool pooled_static_vector<T, B, InitialSize, Track>::empty() const
+constexpr inline bool pooled_static_vector<T, B, InitialSize, Track>::empty() const
 {
     return _current == &_objects[0];
 }

@@ -4,9 +4,6 @@
 #include "containers/pool_item.hpp"
 #include "containers/dictionary.hpp"
 
-#include <cppcoro/task.hpp>
-#include <cppcoro/static_thread_pool.hpp>
-
 
 template <typename derived_t>
 class entity : public pool_item<entity<derived_t>>

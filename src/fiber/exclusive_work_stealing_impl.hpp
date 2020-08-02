@@ -15,35 +15,37 @@
 #include "boost/fiber/detail/thread_barrier.hpp"
 #include "boost/fiber/type.hpp"
 
-#ifdef BOOST_HAS_ABI_HEADERS
-#  include BOOST_ABI_PREFIX
-#endif
 
-std::atomic< std::uint32_t > exclusive_work_stealing::counter_{ 0 };
-std::vector< boost::intrusive_ptr< exclusive_work_stealing > > exclusive_work_stealing::schedulers_{};
+template <int SLOT>
+std::atomic< std::uint32_t > exclusive_work_stealing<SLOT>::counter_{ 0 };
+template <int SLOT>
+std::vector< boost::intrusive_ptr< exclusive_work_stealing<SLOT> > > exclusive_work_stealing<SLOT>::schedulers_{};
 
+template <int SLOT>
 void
-    exclusive_work_stealing::init_(std::uint32_t thread_count,
-        std::vector< boost::intrusive_ptr< exclusive_work_stealing > >& schedulers) {
+exclusive_work_stealing<SLOT>::init_(std::uint32_t thread_count,
+    std::vector< boost::intrusive_ptr< exclusive_work_stealing > >& schedulers) {
     // resize array of schedulers to thread_count, initilized with nullptr
     std::vector< boost::intrusive_ptr< exclusive_work_stealing > >{ thread_count, nullptr }.swap(schedulers);
 }
 
-exclusive_work_stealing::exclusive_work_stealing(std::uint32_t thread_count, bool suspend) :
+template <int SLOT>
+exclusive_work_stealing<SLOT>::exclusive_work_stealing(std::uint32_t thread_count, bool suspend) :
     id_{ counter_++ },
     thread_count_{ thread_count },
     suspend_{ suspend } {
     static boost::fibers::detail::thread_barrier b{ thread_count };
     // initialize the array of schedulers
     static std::once_flag flag;
-    std::call_once(flag, &exclusive_work_stealing::init_, thread_count_, std::ref(schedulers_));
+    std::call_once(flag, &exclusive_work_stealing<SLOT>::init_, thread_count_, std::ref(schedulers_));
     // register pointer of this scheduler
     schedulers_[id_] = this;
     b.wait();
 }
 
+template <int SLOT>
 void
-    exclusive_work_stealing::awakened(boost::fibers::context* ctx) noexcept {
+exclusive_work_stealing<SLOT>::awakened(boost::fibers::context* ctx) noexcept {
     if (!ctx->is_context(boost::fibers::type::pinned_context)) {
         ctx->detach();
     }
@@ -58,10 +60,11 @@ void
     }
 }
 
+template <int SLOT>
 boost::fibers::context*
-    exclusive_work_stealing::pick_next() noexcept {
+exclusive_work_stealing<SLOT>::pick_next() noexcept {
     boost::fibers::context* victim = bundles_.pop();
-    
+
     if (nullptr != victim)
     {
         boost::context::detail::prefetch_range(victim, sizeof(boost::fibers::context));
@@ -105,8 +108,9 @@ boost::fibers::context*
     return victim;
 }
 
+template <int SLOT>
 void
-    exclusive_work_stealing::suspend_until(std::chrono::steady_clock::time_point const& time_point) noexcept {
+exclusive_work_stealing<SLOT>::suspend_until(std::chrono::steady_clock::time_point const& time_point) noexcept {
     if (suspend_) {
         if ((std::chrono::steady_clock::time_point::max)() == time_point) {
             std::unique_lock< std::mutex > lk{ mtx_ };
@@ -121,8 +125,9 @@ void
     }
 }
 
+template <int SLOT>
 void
-    exclusive_work_stealing::notify() noexcept {
+exclusive_work_stealing<SLOT>::notify() noexcept {
     if (suspend_) {
         std::unique_lock< std::mutex > lk{ mtx_ };
         flag_ = true;
@@ -131,16 +136,14 @@ void
     }
 }
 
-void exclusive_work_stealing::start_bundle()
+template <int SLOT>
+void exclusive_work_stealing<SLOT>::start_bundle()
 {
     bundle_ = true;
 }
 
-void exclusive_work_stealing::end_bundle()
+template <int SLOT>
+void exclusive_work_stealing<SLOT>::end_bundle()
 {
     bundle_ = false;
 }
-
-#ifdef BOOST_HAS_ABI_HEADERS
-#  include BOOST_ABI_SUFFIX
-#endif

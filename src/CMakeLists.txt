@@ -6,13 +6,14 @@ add_library(docos_core STATIC
     containers/dictionary.hpp
     containers/pool_item.hpp
     containers/pooled_static_vector.hpp
+    containers/thread_local_tasks.cpp
+    containers/thread_local_tasks.hpp
     containers/ticket.hpp
     entity/entity.hpp
     entity/scheme.hpp
     entity/transform.hpp
-    fiber/spinlock.hpp
     fiber/exclusive_work_stealing.hpp
-    fiber/exclusive_work_stealing.cpp
+    fiber/exclusive_work_stealing_impl.hpp
     gx/camera/camera.hpp
     gx/camera/camera.cpp
     gx/mesh/mesh.hpp
@@ -35,19 +36,13 @@ add_executable(docos main.cpp)
 target_link_libraries(docos_core PUBLIC Threads::Threads)
 target_compile_features(docos_core PUBLIC cxx_std_20)
 target_include_directories(docos_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(docos_core PUBLIC 
-    BOOST_ERROR_CODE_HEADER_ONLY
-    BOOST_SYSTEM_NO_DEPRECATED
-    BOOST_ALL_NO_LIB
-    BOOST_ASIO_NO_DEPRECATED)
-
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(docos_core PUBLIC -fcoroutines-ts -stdlib=libc++)
-    target_link_options(docos_core INTERFACE -stdlib=libc++ -lc++abi -lstdc++)
+    target_compile_options(docos_core PUBLIC -stdlib=libc++)
+    target_link_options(docos_core INTERFACE -stdlib=libc++ -lc++abi)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_definitions(docos_core PUBLIC _UNICODE UNICODE)
-    target_link_libraries(docos PUBLIC synchronization.lib)
+        target_compile_definitions(docos_core PUBLIC _UNICODE UNICODE)
+        target_compile_options(docos_core PUBLIC /MP)
 endif()
 
 target_link_libraries(docos PUBLIC docos_core)

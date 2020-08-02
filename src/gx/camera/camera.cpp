@@ -53,7 +53,7 @@ void camera::schedule()
     {
         _scheduled = true;
         
-        cppcoro::sync_wait(executor::instance->schedule([this]() {
+        executor::instance->schedule([this]() {
             _mvp = _proj * _view * _model;
 
             glBindBuffer(GL_UNIFORM_BUFFER, _matrices_ubo);
@@ -61,6 +61,6 @@ void camera::schedule()
             glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
             _scheduled = false;
-        }));
+        });
     }
 }

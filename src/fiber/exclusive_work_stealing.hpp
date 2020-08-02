@@ -7,6 +7,7 @@
 #include <mutex>
 
 
+template <int SLOT>
 class BOOST_FIBERS_DECL exclusive_work_stealing : public boost::fibers::algo::algorithm {
 private:
     static std::atomic< std::uint32_t >                     counter_;
@@ -56,3 +57,18 @@ public:
 
     void notify() noexcept override;
 };
+
+inline boost::fibers::algo::algorithm::ptr_t& get_scheduling_algorithm()
+{
+    thread_local boost::fibers::algo::algorithm::ptr_t algo{ nullptr };
+    return algo;
+}
+
+template< typename SchedAlgo, typename ... Args >
+void public_scheduling_algorithm(Args&& ... args) noexcept {
+    get_scheduling_algorithm() = new SchedAlgo(std::forward< Args >(args) ...);
+    boost::fibers::context::active()->get_scheduler()
+        ->set_algo(get_scheduling_algorithm());
+}
+
+#include "fiber/exclusive_work_stealing_impl.hpp"

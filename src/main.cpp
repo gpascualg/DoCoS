@@ -9,8 +9,6 @@
 #include "updater/executor.hpp"
 #include "updater/updater.hpp"
 
-#include <cppcoro/sync_wait.hpp>
-
 #include <boost/fiber/mutex.hpp>
 #include <boost/fiber/condition_variable.hpp>
 
@@ -143,7 +141,7 @@ public:
 
     void run()
     {
-        auto executor = new ::executor();
+        auto executor = new ::executor(2);
         auto overlap_scheme = overlap(store, obj_scheme, camera_scheme);
         auto updater = overlap_scheme.make_updater(std::thread::hardware_concurrency());
 
@@ -209,6 +207,8 @@ public:
  
         glfwDestroyWindow(_window);
         glfwTerminate();
+
+        executor->stop();
         delete executor;
     }
 
@@ -229,7 +229,7 @@ void sub_fiber(int id)
     std::cout << (std::string("SUBFIBER ") + std::to_string(id) + " THREAD " +std::to_string(h) + "\n");
 
     auto ctx = boost::fibers::context::active();
-    reinterpret_cast<exclusive_work_stealing*>(ctx->get_scheduler())->start_bundle();
+    reinterpret_cast<exclusive_work_stealing<0>*>(ctx->get_scheduler())->start_bundle();
 
     int num_fibers = 0;
     boost::fibers::mutex mtx;
@@ -255,7 +255,7 @@ void sub_fiber(int id)
         }).detach();
     }
 
-    reinterpret_cast<exclusive_work_stealing*>(ctx->get_scheduler())->end_bundle();
+    reinterpret_cast<exclusive_work_stealing<0>*>(ctx->get_scheduler())->end_bundle();
 
     mtx.lock();
     cv.wait(mtx, [&num_fibers]() { return 0 == num_fibers; });
@@ -304,29 +304,8 @@ void main_fiber()
 
 int main()
 {
-    //quick_test test;
-    //test.run();
-    // create fibers with tasks
-
-    boost::fibers::mutex mtx;
-    boost::fibers::condition_variable_any cv;
-    // start wotrker-thread first
-    auto worker = std::thread(
-        [&mtx, &cv] {
-            boost::fibers::use_scheduling_algorithm<exclusive_work_stealing>(2);
-            mtx.lock();
-            // suspend main-fiber from the worker thread
-            cv.wait(mtx);
-            mtx.unlock();
-        });
-    boost::fibers::use_scheduling_algorithm<exclusive_work_stealing>(2);
-
-    boost::fibers::fiber f{ []() { main_fiber(); } };
-    f.join();
-
-    // signal termination
-    cv.notify_all();
-    worker.join();
+    quick_test test;
+    test.run();
 
     return 0;
 }

@@ -3,6 +3,7 @@ include(FetchContent)
 
 find_package(Boost 1.73 REQUIRED COMPONENTS fiber)
 target_include_directories(docos_core PUBLIC ${Boost_INCLUDE_DIRS})
+target_link_directories(docos_core PUBLIC ${Boost_LIBRARY_DIRS})
 target_link_libraries(docos_core PUBLIC Boost::fiber)
 
 

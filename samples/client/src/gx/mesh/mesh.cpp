@@ -34,7 +34,7 @@ void mesh::scheme_created()
     _transform = store<entity<transform>>::get(id());
 }
 
-void mesh::draw()
+void mesh::sync()
 {
     for (auto program : _programs)
     {

@@ -16,7 +16,7 @@ public:
 
     void scheme_created();
 
-    void draw();
+    void sync();
 
     template <template <typename...> typename S, typename... components>
     constexpr inline void scheme_information(const S<components...>& scheme)

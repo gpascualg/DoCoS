@@ -16,22 +16,22 @@ public:
     inline entity_id_t id();
 
     template <typename... Args>
-    static inline constexpr bool is_updatable()
+    static inline constexpr bool has_update()
     {
-        return updatable<derived_t, Args...>;
+        return ::has_update<derived_t, Args...>;
     }
 
     template <typename... Args>
-    static inline constexpr bool is_drawable()
+    static inline constexpr bool has_sync()
     {
-        return drawable<derived_t, Args...>;
+        return ::has_sync<derived_t, Args...>;
     }
 
     inline entity<derived_t>* base()
     {
         return this;
     }
-
+    
     template <typename T>
     inline T* get()
     {
@@ -48,7 +48,7 @@ private:
     constexpr inline void update(Args&&... args);
 
     template <typename... Args>
-    constexpr inline void draw(Args&&... args);
+    constexpr inline void sync(Args&&... args);
 
     template <typename... Args>
     constexpr inline void construct(entity_id_t id, Args&&... args);
@@ -102,7 +102,7 @@ template <typename derived_t>
 template <typename... Args>
 constexpr inline void entity<derived_t>::update(Args&&... args)
 {
-    if constexpr (updatable<derived_t, Args...>)
+    if constexpr (::has_update<derived_t, Args...>)
     {
         static_cast<derived_t&>(*this).update(std::forward<Args>(args)...);
     }
@@ -110,11 +110,11 @@ constexpr inline void entity<derived_t>::update(Args&&... args)
 
 template <typename derived_t>
 template <typename... Args>
-constexpr inline void entity<derived_t>::draw(Args&&... args)
+constexpr inline void entity<derived_t>::sync(Args&&... args)
 {
-    if constexpr (drawable<derived_t, Args...>)
+    if constexpr (::has_sync<derived_t, Args...>)
     {
-        static_cast<derived_t&>(*this).draw(std::forward<Args>(args)...);
+        static_cast<derived_t&>(*this).sync(std::forward<Args>(args)...);
     }
 }
 

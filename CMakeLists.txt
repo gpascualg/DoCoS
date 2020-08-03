@@ -11,3 +11,4 @@ set(BOOST_VERSION "1.73" CACHE STRING "Boost version")
 
 add_subdirectory(src)
 add_subdirectory(dep)
+add_subdirectory(samples)

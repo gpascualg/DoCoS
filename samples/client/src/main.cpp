@@ -27,6 +27,23 @@ class X : public entity<X>
 public:
     void construct()
     {}
+
+    void update()
+    {
+        std::cout << "XXX Update at " << std::this_thread::get_id() << std::endl;
+    }
+};
+
+class Y : public entity<Y>
+{
+public:
+    void construct()
+    {}
+
+    void update()
+    {
+        std::cout << "YYY Update at " << std::this_thread::get_id() << std::endl;
+    }
 };
 
 
@@ -141,7 +158,7 @@ public:
 
     void run()
     {
-        auto executor = new ::executor(2);
+        auto executor = new ::executor(12);
         auto overlap_scheme = overlap(store, obj_scheme, camera_scheme);
         auto updater = overlap_scheme.make_updater(std::thread::hardware_concurrency());
 
@@ -154,56 +171,59 @@ public:
         );
 
         executor->create_with_callback(obj_scheme,
-            [](auto x, auto transform, auto mesh)
+            [](auto x, auto y, auto transform, auto mesh)
             {
                 transform->local_scale({10, 1, 10});
-                return std::tuple(x, transform, mesh);
+                return std::tuple(x, y, transform, mesh);
             },
-            obj_scheme.args<X>(), 
+            obj_scheme.args<X>(),
+            obj_scheme.args<Y>(),
             obj_scheme.args<transform>(-10.0f, -10.0f),
             obj_scheme.args<mesh>((float*)vertices, (std::size_t)sizeof(vertices), (float*)indices, (std::size_t)sizeof(indices), std::initializer_list<program*> { &_program })
         );
 
         executor->create(obj_scheme,
-            obj_scheme.args<X>(), 
+            obj_scheme.args<X>(),
+            obj_scheme.args<Y>(),
             obj_scheme.args<transform>(-2.0f, 0.0f),
             obj_scheme.args<mesh>((float*)vertices, (std::size_t)sizeof(vertices), (float*)indices, (std::size_t)sizeof(indices), std::initializer_list<program*> { &_program })
         );
 
         auto id = executor->create_with_callback(obj_scheme,
-            [](auto x, auto transform, auto mesh)
+            [](auto x, auto y, auto transform, auto mesh)
             {
                 transform->local_scale({2, 1, 2});
-                return std::tuple(x, transform, mesh);
+                return std::tuple(x, y, transform, mesh);
             },
             obj_scheme.args<X>(), 
+            obj_scheme.args<Y>(),
             obj_scheme.args<transform>(1.0f, -4.0f),
             obj_scheme.args<mesh>((float*)vertices, (std::size_t)sizeof(vertices), (float*)indices, (std::size_t)sizeof(indices), std::initializer_list<program*> { &_program })
         );
 
-        executor->execute_tasks();
- 
-        while (!glfwWindowShouldClose(_window))
-        {
-            float ratio;
-            int width, height;
-    
-            glfwGetFramebufferSize(_window, &width, &height);
-            ratio = width / (float) height;
-    
-            glViewport(0, 0, width, height);
-            glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            glClearDepth(1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
-            executor->update(updater);
-            executor->update(updater, 5);
             executor->execute_tasks();
-            executor->draw(updater);
-    
-            glfwSwapBuffers(_window);
-            glfwPollEvents();
-        }
+
+            while (!glfwWindowShouldClose(_window))
+            {
+                float ratio;
+                int width, height;
+
+                glfwGetFramebufferSize(_window, &width, &height);
+                ratio = width / (float)height;
+
+                glViewport(0, 0, width, height);
+                glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+                glClearDepth(1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                std::cout << "----------------" << std::endl;
+                executor->update(updater);
+                executor->execute_tasks();
+                executor->sync(updater);
+
+                glfwSwapBuffers(_window);
+                glfwPollEvents();
+            }
  
         glfwDestroyWindow(_window);
         glfwTerminate();
@@ -218,8 +238,8 @@ private:
     program _program;
 
     // Prebuilt schemes
-    scheme_store<dic<X>, dic<transform>, dic<mesh>, dic<camera, 1>> store;
-    decltype(scheme<X, transform, mesh>::make(store)) obj_scheme;
+    scheme_store<dic<X>, dic<Y>, dic<transform>, dic<mesh>, dic<camera, 1>> store;
+    decltype(scheme<X, Y, transform, mesh>::make(store)) obj_scheme;
     decltype(scheme<camera>::make(store)) camera_scheme;
 };
 

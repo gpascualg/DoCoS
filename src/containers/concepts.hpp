@@ -25,13 +25,13 @@ concept destroyable = requires(T* t, Args&&... args) {
 };
 
 template <typename T, typename... Args>
-concept updatable = requires(T* t, Args&&... args) {
+concept has_update = requires(T* t, Args&&... args) {
     { t->update(std::forward<Args>(args)...) };
 };
 
 template <typename T, typename... Args>
-concept drawable = requires(T* t, Args&&... args) {
-    { t->draw(std::forward<Args>(args)...) };
+concept has_sync = requires(T* t, Args&&... args) {
+    { t->sync(std::forward<Args>(args)...) };
 };
 
 template <typename T, template <typename...> typename S, typename... components>

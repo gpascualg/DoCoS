@@ -14,12 +14,7 @@ add_library(docos_core STATIC
     entity/transform.hpp
     fiber/exclusive_work_stealing.hpp
     fiber/exclusive_work_stealing_impl.hpp
-    gx/camera/camera.hpp
-    gx/camera/camera.cpp
-    gx/mesh/mesh.hpp
-    gx/mesh/mesh.cpp
-    gx/shader/program.hpp
-    gx/shader/program.cpp
+    ids/generator.hpp
     io/memmap.hpp
     io/memmap.cpp
     traits/base_dic.hpp
@@ -30,8 +25,6 @@ add_library(docos_core STATIC
     updater/executor.hpp
     updater/updater.hpp
     docos.cpp)
-
-add_executable(docos main.cpp)
 
 target_link_libraries(docos_core PUBLIC Threads::Threads)
 target_compile_features(docos_core PUBLIC cxx_std_20)
@@ -44,11 +37,3 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         target_compile_definitions(docos_core PUBLIC _UNICODE UNICODE)
         target_compile_options(docos_core PUBLIC /MP)
 endif()
-
-target_link_libraries(docos PUBLIC docos_core)
-
-add_custom_command(
-    TARGET docos POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory 
-            ${CMAKE_SOURCE_DIR}/resources
-            ${CMAKE_CURRENT_BINARY_DIR}/resources)

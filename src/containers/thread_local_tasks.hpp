@@ -14,20 +14,20 @@ public:
 public:
     static inline void store(T* container)
     {
+        _mutex.lock();
         _containers.push_back(container);
+        _mutex.unlock();
     }
 
-    static container_t& get()
+    static inline container_t& get()
     {
         return _containers;
     }
 
 private:
-    static container_t _containers;
+    static inline boost::fibers::mutex _mutex;
+    static inline container_t _containers;
 };
-
-template <typename T>
-typename thread_local_storage<T>::container_t thread_local_storage<T>::_containers;
 
 
 class tasks

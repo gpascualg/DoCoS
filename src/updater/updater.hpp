@@ -14,11 +14,11 @@ template <typename... types>
 class updater
 {
 public:
-    updater(uint8_t num_threads)
+    updater()
     {}
 
     template <typename... vectors>
-    updater(uint8_t num_threads, std::tuple<vectors...>& components)
+    updater(std::tuple<vectors...>& components)
     {
         std::apply([this](auto&... comps) {
             (register_vector(&comps), ...);
@@ -36,7 +36,7 @@ public:
             std::visit([this, ...args { std::forward<Args>(args) }](auto& vec) mutable {
                 using E = typename std::remove_pointer<std::decay_t<decltype(vec)>>::type;
 
-                if constexpr (!E::derived_t::template is_updatable<Args...>())
+                if constexpr (!E::derived_t::template has_update<Args...>())
                 {
                     return;
                 }
@@ -52,14 +52,14 @@ public:
     }
 
     template <typename... Args>
-    void draw(Args&&... args)
+    void sync(Args&&... args)
     {
         for (auto& variant : _vectors)
         {
             std::visit([this, ...args { std::forward<Args>(args) }](auto& vec) mutable {
                 using E = typename std::remove_pointer<std::decay_t<decltype(vec)>>::type;
 
-                if constexpr (!E::derived_t::template is_drawable<Args...>())
+                if constexpr (!E::derived_t::template has_sync<Args...>())
                 {
                     return;
                 }
@@ -67,7 +67,7 @@ public:
                 {
                     for (auto obj : vec->range())
                     {
-                        obj->base()->draw(std::forward<Args>(args)...);
+                        obj->base()->sync(std::forward<Args>(args)...);
                     }
                 }
             }, variant);
@@ -110,21 +110,22 @@ private:
         boost::fibers::mutex updates_mutex;
         boost::fibers::condition_variable_any updates_cv;
 
+        std::cout << "Bundle at " << std::this_thread::get_id() << std::endl;
         reinterpret_cast<exclusive_work_stealing<0>*>(get_scheduling_algorithm().get())->start_bundle();
 
         for (auto obj : vector->range())
         {
 
-            boost::fibers::fiber([obj, ...args{ std::forward<Args>(args) }, &updates_mutex, &updates_cv]() mutable {
+            boost::fibers::fiber([obj, ...args{ std::forward<Args>(args) }, &pending_updates, &updates_mutex, &updates_cv]() mutable {
                 obj->base()->update(std::forward<Args>(args)...);
 
                 updates_mutex.lock();
                 --pending_updates;
                 updates_mutex.unlock();
 
-                if (_pending_updates == 0)
+                if (pending_updates == 0)
                 {
-                    _updates_cv.notify_all();
+                    updates_cv.notify_all();
                 }
             }).detach();
         }
@@ -132,7 +133,7 @@ private:
         reinterpret_cast<exclusive_work_stealing<0>*>(get_scheduling_algorithm().get())->end_bundle();
 
         updates_mutex.lock();
-        updates_cv.wait(_updates_mutex, [&pending_updates]() { return pending_updates == 0; });
+        updates_cv.wait(updates_mutex, [&pending_updates]() { return pending_updates == 0; });
         updates_mutex.unlock();
     }
 

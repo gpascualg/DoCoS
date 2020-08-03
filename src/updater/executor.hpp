@@ -1,6 +1,7 @@
 #pragma once
 
 #include "containers/thread_local_tasks.hpp"
+#include "ids/generator.hpp"
 #include "traits/shared_function.hpp"
 #include "updater/updater.hpp"
 
@@ -19,24 +20,17 @@ public:
 
 public:
     executor(uint8_t num_workers) :
-        _threads_joined(num_workers),
-        _current_id(0)
+        _threads_joined(num_workers)
     {
         // What if there is more than one executor?
         instance = this;
 
-        boost::fibers::barrier threads_ready(num_workers);
-
         for (uint8_t thread_id = 1; thread_id < num_workers; ++thread_id)
         {
-
             _workers.push_back(std::thread(
-                [this, num_workers, &threads_ready] {
+                [this, num_workers] {
                     // Set thread algo
                     public_scheduling_algorithm<exclusive_work_stealing<0>>(num_workers);
-
-                    // Signal ready
-                    threads_ready.wait();
 
                     _mutex.lock();
                     // suspend main-fiber from the worker thread
@@ -51,9 +45,6 @@ public:
 
         // Set thread algo
         public_scheduling_algorithm<exclusive_work_stealing<0>>(num_workers);
-
-        // Wait for others
-        threads_ready.wait();
     }
 
     void stop()
@@ -74,12 +65,6 @@ public:
         get_scheduler().schedule(make_shared_function(std::move(callback))); // ;
     }
 
-    template <typename U, typename... Args>
-    void update(U& updater, Args&&... args)
-    {
-        updater.update(std::forward<Args>(args)...);
-    }
-
     void execute_tasks()
     {
         for (auto ts : thread_local_storage<tasks>::get())
@@ -93,16 +78,25 @@ public:
         }
     }
 
+
     template <typename U, typename... Args>
-    void draw(U& updater, Args&&... args)
+    void update(U& updater, Args&&... args)
     {
-        updater.draw(std::forward<Args>(args)...);
+        boost::fibers::fiber([&updater, ...args{ std::forward<Args>(args) }]() mutable {
+            updater.update(std::forward<Args>(args)...);
+        }).join();
+    }
+
+    template <typename U, typename... Args>
+    void sync(U& updater, Args&&... args)
+    {
+        updater.sync(std::forward<Args>(args)...);
     }
 
     template <template <typename...> typename S, typename... A, typename... vecs>
     constexpr uint64_t create(S<vecs...>& scheme, A&&... scheme_args)
     {
-        return create_with_callback(scheme, [](auto&&... e) { return std::tuple(e...); }, scheme_args...);
+        return create_with_callback(scheme, [](auto&&... e) { return std::tuple(e...); }, std::forward<A>(scheme_args)...);
     }
 
     template <template <typename...> typename S,typename... Args, typename... vecs>
@@ -116,11 +110,16 @@ public:
     template <template <typename...> typename S, typename C, typename... A, typename... vecs>
     constexpr uint64_t create_with_callback(S<vecs...>& scheme, C&& callback, A&&... scheme_args)
     {
+        uint64_t id = id_generator<S<vecs...>>().next();
+        return create_with_callback(id, scheme, std::move(callback), std::forward<A>(scheme_args)...);
+    }
+
+    template <template <typename...> typename S, typename C, typename... A, typename... vecs>
+    constexpr uint64_t create_with_callback(uint64_t id, S<vecs...>& scheme, C&& callback, A&&... scheme_args)
+    {
         static_assert(sizeof...(vecs) == sizeof...(scheme_args), "Incomplete scheme creation");
 
-        uint64_t id = next_id();
-        
-        schedule([id, callback { std::move(callback) }, ...scheme_args { std::move(scheme_args) }, &scheme] {
+        schedule([id, callback{ std::move(callback) }, ...scheme_args{ std::move(scheme_args) }, &scheme]{
             auto entities = callback(std::apply([&](auto&&... args) {
                 auto component = scheme_args.comp.alloc(id, std::forward<decltype(args)>(args)...);
                 component->base()->scheme_information(scheme);
@@ -130,28 +129,24 @@ public:
             std::apply([](auto&&... entities) {
                 (..., entities->base()->scheme_created());
             }, std::move(entities));
-        });
+            });
 
         return id;
     }
 
-private:
-    inline tasks get_scheduler()
+protected:
+    inline tasks& get_scheduler()
     {
         thread_local tasks ts;
         return ts;
     }
 
-private:
-    uint64_t next_id()
+
+    template <typename T>
+    inline generator<T>& id_generator()
     {
-        if (!_free_ids.empty())
-        {
-            auto id = _free_ids.back();
-            _free_ids.pop_back();
-            return id;
-        }
-        return _current_id++;
+        thread_local generator<T> gen;
+        return gen;
     }
 
 private:
@@ -159,7 +154,4 @@ private:
     boost::fibers::mutex _mutex;
     boost::fibers::condition_variable_any _cv;
     boost::fibers::barrier _threads_joined;
-
-    uint64_t _current_id;
-    std::vector<uint64_t> _free_ids;
 };

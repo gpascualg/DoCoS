@@ -50,9 +50,9 @@ class scheme
 public:
     std::tuple<std::add_lvalue_reference_t<vectors>...> components;
 
-    constexpr updater<std::add_pointer_t<vectors>...> make_updater(uint8_t num_threads)
+    constexpr updater<std::add_pointer_t<vectors>...> make_updater()
     {
-        return updater<std::add_pointer_t<vectors>...>(num_threads, components);
+        return updater<std::add_pointer_t<vectors>...>(components);
     }
 
     template <typename T>

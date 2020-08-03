@@ -6,7 +6,7 @@ endif()
 
 project(DoCoS VERSION 0.1 LANGUAGES CXX)
 
-option(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_LIBS ON CACHE STRING "Boost static libs")
 set(BOOST_VERSION "1.73" CACHE STRING "Boost version")
 
 add_subdirectory(src)

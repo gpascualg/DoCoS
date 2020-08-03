@@ -95,14 +95,14 @@ public:
     template <typename... T>
     static constexpr inline auto make(scheme_store<T...>& store)
     {
-        using W = without_duplicates<scheme, scheme<scheme_store<T...>::dic_t<vectors>...>>;
+        using W = without_duplicates<scheme, scheme<typename scheme_store<T...>::template dic_t<vectors>...>>;
         return W{ store };
     }
 
 private:
     template <typename... T>
     constexpr scheme(scheme_store<T...>& store) :
-        components(store.get<vectors>()...)
+        components(store.template get<vectors>()...)
     {}
 };
 

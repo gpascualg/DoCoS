@@ -1,5 +1,3 @@
-#pragma once
-
 #include "containers/thread_local_tasks.hpp"
 
 #include <mutex>

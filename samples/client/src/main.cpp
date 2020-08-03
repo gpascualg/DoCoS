@@ -158,9 +158,9 @@ public:
 
     void run()
     {
-        auto executor = new ::executor(12);
+        auto executor = new ::executor(12, false);
         auto overlap_scheme = overlap(store, obj_scheme, camera_scheme);
-        auto updater = overlap_scheme.make_updater(std::thread::hardware_concurrency());
+        auto updater = overlap_scheme.make_updater();
 
         executor->create_with_callback(camera_scheme, [](auto camera){
                 CAMERA_ID = camera->id();

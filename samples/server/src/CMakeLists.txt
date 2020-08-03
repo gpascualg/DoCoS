@@ -11,6 +11,10 @@ add_executable(docos_sample_server
 target_include_directories(docos_sample_server PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(docos_sample_server PRIVATE docos_core)
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_definitions(docos_sample_server PRIVATE BOOST_ASIO_DISABLE_CONCEPTS)
+endif()
+
 add_custom_command(
     TARGET docos_sample_server POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory 

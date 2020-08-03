@@ -31,6 +31,11 @@ public:
     {
         return this;
     }
+
+    inline derived_t* derived()
+    {
+        return reinterpret_cast<derived_t*> (this);
+    }
     
     template <typename T>
     inline T* get()

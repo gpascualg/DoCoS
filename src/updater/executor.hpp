@@ -19,7 +19,7 @@ public:
     static constexpr std::size_t buffer_size = 1024;
 
 public:
-    executor(uint8_t num_workers) :
+    executor(uint8_t num_workers, bool suspend) :
         _threads_joined(num_workers)
     {
         // What if there is more than one executor?
@@ -28,9 +28,9 @@ public:
         for (uint8_t thread_id = 1; thread_id < num_workers; ++thread_id)
         {
             _workers.push_back(std::thread(
-                [this, num_workers] {
+                [this, num_workers, suspend] {
                     // Set thread algo
-                    public_scheduling_algorithm<exclusive_work_stealing<0>>(num_workers);
+                    public_scheduling_algorithm<exclusive_work_stealing<0>>(num_workers, suspend);
 
                     _mutex.lock();
                     // suspend main-fiber from the worker thread
@@ -44,7 +44,7 @@ public:
         }
 
         // Set thread algo
-        public_scheduling_algorithm<exclusive_work_stealing<0>>(num_workers);
+        public_scheduling_algorithm<exclusive_work_stealing<0>>(num_workers, suspend);
     }
 
     void stop()
@@ -129,7 +129,7 @@ public:
             std::apply([](auto&&... entities) {
                 (..., entities->base()->scheme_created());
             }, std::move(entities));
-            });
+        });
 
         return id;
     }
@@ -140,7 +140,6 @@ protected:
         thread_local tasks ts;
         return ts;
     }
-
 
     template <typename T>
     inline generator<T>& id_generator()

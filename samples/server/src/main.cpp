@@ -10,7 +10,7 @@
 
 int main()
 {
-    server server(12);
+    server server(3);
     server.mainloop();
     server.stop();
     return 0;

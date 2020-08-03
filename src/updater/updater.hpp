@@ -31,6 +31,8 @@ public:
     template <typename... Args>
     void update(Args&&... args)
     {
+        _pending_updates = 0;
+
         for (auto& variant : _vectors)
         {
             std::visit([this, ...args { std::forward<Args>(args) }](auto& vec) mutable {
@@ -42,13 +44,21 @@ public:
                 }
                 else
                 {
-                    boost::fibers::fiber([this, &vec, ...args{ std::forward<Args>(args) }]() {
+                    _updates_mutex.lock();
+                    _pending_updates += vec->size();
+                    _updates_mutex.unlock();
+
+                    boost::fibers::fiber([this, &vec, ...args{ std::forward<Args>(args) }]() mutable {
                         update_impl(vec, std::forward<Args>(args)...);
                     }).detach();
                 }
                 
             }, variant);
         }
+
+        _updates_mutex.lock();
+        _updates_cv.wait(_updates_mutex, [this]() { return _pending_updates == 0; });
+        _updates_mutex.unlock();
     }
 
     template <typename... Args>
@@ -105,38 +115,31 @@ private:
     template <typename T, typename... Args>
     void update_impl(T* vector, Args&&... args)
     {
-        // TODO(gpascualg): Make this a vector member so that we don't initialize/destroy every time
-        uint64_t pending_updates = vector->size();
-        boost::fibers::mutex updates_mutex;
-        boost::fibers::condition_variable_any updates_cv;
-
-        std::cout << "Bundle at " << std::this_thread::get_id() << std::endl;
         reinterpret_cast<exclusive_work_stealing<0>*>(get_scheduling_algorithm().get())->start_bundle();
 
         for (auto obj : vector->range())
         {
 
-            boost::fibers::fiber([obj, ...args{ std::forward<Args>(args) }, &pending_updates, &updates_mutex, &updates_cv]() mutable {
+            boost::fibers::fiber([this, obj, ...args{ std::forward<Args>(args) }]() mutable {
                 obj->base()->update(std::forward<Args>(args)...);
+                
+                _updates_mutex.lock();
+                --_pending_updates;
+                _updates_mutex.unlock();
 
-                updates_mutex.lock();
-                --pending_updates;
-                updates_mutex.unlock();
-
-                if (pending_updates == 0)
+                if (_pending_updates == 0)
                 {
-                    updates_cv.notify_all();
+                    _updates_cv.notify_all();
                 }
             }).detach();
         }
 
         reinterpret_cast<exclusive_work_stealing<0>*>(get_scheduling_algorithm().get())->end_bundle();
-
-        updates_mutex.lock();
-        updates_cv.wait(updates_mutex, [&pending_updates]() { return pending_updates == 0; });
-        updates_mutex.unlock();
     }
 
 private:
     std::vector<std::variant<types...>> _vectors;
+    uint64_t _pending_updates;
+    boost::fibers::mutex _updates_mutex;
+    boost::fibers::condition_variable_any _updates_cv;
 };

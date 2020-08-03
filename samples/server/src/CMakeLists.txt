@@ -1,4 +1,7 @@
 add_executable(docos_sample_server 
+    common/definitions.hpp
+    core/client.hpp
+    core/client.cpp
     core/server.hpp
     core/server.cpp
     maps/map.hpp

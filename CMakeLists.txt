@@ -6,9 +6,15 @@ endif()
 
 project(DoCoS VERSION 0.1 LANGUAGES CXX)
 
-set(Boost_USE_STATIC_LIBS ON CACHE STRING "Boost static libs")
+option(BUILD_SAMPLES        "Build samples"             ON)
+option(BUILD_SAMPLE_CLIENT  "Build client sample"       OFF)
+option(BUILD_SAMPLE_SERVER  "Build server sample"       ON)
+option(Boost_USE_STATIC_LIBS "Use Boost static libs"    ON)
 set(BOOST_VERSION "1.73" CACHE STRING "Boost version")
 
 add_subdirectory(src)
 add_subdirectory(dep)
-add_subdirectory(samples)
+
+if (BUILD_SAMPLES)
+    add_subdirectory(samples)
+endif()

@@ -13,6 +13,7 @@ target_link_libraries(docos_sample_server PRIVATE docos_core)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_definitions(docos_sample_server PRIVATE BOOST_ASIO_DISABLE_CONCEPTS)
+    target_link_libraries(docos_sample_server PRIVATE m)
 endif()
 
 add_custom_command(

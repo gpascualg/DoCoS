@@ -14,11 +14,14 @@ template <typename... types>
 class updater
 {
 public:
-    updater()
+    updater(bool contiguous_component_execution) :
+        _contiguous_component_execution(contiguous_component_execution),
+        _pending_updates(0)
     {}
 
     template <typename... vectors>
-    updater(std::tuple<vectors...>& components)
+    updater(bool contiguous_component_execution, std::tuple<vectors...>& components) :
+        updater{ contiguous_component_execution }
     {
         std::apply([this](auto&... comps) {
             (register_vector(&comps), ...);
@@ -55,7 +58,10 @@ public:
                 
             }, variant);
         }
+    }
 
+    void wait_update()
+    {
         _updates_mutex.lock();
         _updates_cv.wait(_updates_mutex, [this]() { return _pending_updates == 0; });
         _updates_mutex.unlock();
@@ -115,7 +121,10 @@ private:
     template <typename T, typename... Args>
     void update_impl(T* vector, Args&&... args)
     {
-        reinterpret_cast<exclusive_work_stealing<0>*>(get_scheduling_algorithm().get())->start_bundle();
+        if (_contiguous_component_execution)
+        {
+            reinterpret_cast<exclusive_work_stealing<0>*>(get_scheduling_algorithm().get())->start_bundle();
+        }
 
         for (auto obj : vector->range())
         {
@@ -134,10 +143,14 @@ private:
             }).detach();
         }
 
-        reinterpret_cast<exclusive_work_stealing<0>*>(get_scheduling_algorithm().get())->end_bundle();
+        if (_contiguous_component_execution)
+        {
+            reinterpret_cast<exclusive_work_stealing<0>*>(get_scheduling_algorithm().get())->end_bundle();
+        }
     }
 
 private:
+    bool _contiguous_component_execution;
     std::vector<std::variant<types...>> _vectors;
     uint64_t _pending_updates;
     boost::fibers::mutex _updates_mutex;

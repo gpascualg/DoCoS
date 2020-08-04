@@ -9,22 +9,20 @@
 #include <boost/fiber/barrier.hpp>
 
 #include <iostream>
+#include <list>
 #include <tuple>
 
 
 class executor
 {
 public:
-    static inline executor* instance = nullptr;
+    static inline std::list<executor*> instance;
     static constexpr std::size_t buffer_size = 1024;
 
 public:
     executor(uint8_t num_workers, bool suspend) :
         _threads_joined(num_workers)
     {
-        // What if there is more than one executor?
-        instance = this;
-
         for (uint8_t thread_id = 1; thread_id < num_workers; ++thread_id)
         {
             _workers.push_back(std::thread(
@@ -78,19 +76,41 @@ public:
         }
     }
 
-
     template <typename U, typename... Args>
     void update(U& updater, Args&&... args)
     {
+        instance.push_back(this);
+
         boost::fibers::fiber([&updater, ...args{ std::forward<Args>(args) }]() mutable {
             updater.update(std::forward<Args>(args)...);
+            updater.wait_update();
         }).join();
+
+        instance.pop_back();
+    }
+
+    template <typename... U, typename... Args>
+    void update_many(std::tuple<Args...>&& args, U&... updaters)
+    {
+        instance.push_back(this);
+
+        boost::fibers::fiber([... updaters{ &updaters }, args{ std::forward<std::tuple<Args...>>(args) }]() mutable {
+            std::apply([&](auto&&... args) {
+                ((updaters->update(std::forward<decltype(args)>(args)...)), ...);
+            }, args);
+            
+            (updaters->wait_update(), ...);
+        }).join();
+
+        instance.pop_back();
     }
 
     template <typename U, typename... Args>
     void sync(U& updater, Args&&... args)
     {
+        instance.push_back(this);
         updater.sync(std::forward<Args>(args)...);
+        instance.pop_back();
     }
 
     template <template <typename...> typename S, typename... A, typename... vecs>

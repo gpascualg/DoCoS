@@ -13,11 +13,6 @@
 #include <boost/range/join.hpp>
 
 
-//template <typename T, typename B, uint16_t InitialSize, typename Track>
-//class pooled_static_vector;
-
-
-
 template <typename T, typename B, uint16_t InitialSize, typename Track=void>
 class pooled_static_vector
 {
@@ -125,7 +120,7 @@ T* pooled_static_vector<T, B, InitialSize, Track>::alloc(Args&&... args)
     }   
     
     // Get ticket to this position
-    object->_ticket->_ptr = object;
+    object->_ticket = typename ::ticket<B>::ptr(new ::ticket<B>(reinterpret_cast<B*>(object)));
     static_cast<B&>(*object).construct(std::forward<Args>(args)...);
 
     // Track it if necessary

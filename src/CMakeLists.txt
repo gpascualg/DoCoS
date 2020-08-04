@@ -1,9 +1,11 @@
 find_package (Threads REQUIRED)
 
 add_library(docos_core STATIC 
+    common/result_of.hpp
     common/types.hpp
     containers/concepts.hpp
     containers/dictionary.hpp
+    containers/plain_pool.hpp
     containers/pool_item.hpp
     containers/pooled_static_vector.hpp
     containers/thread_local_tasks.cpp
@@ -14,6 +16,10 @@ add_library(docos_core STATIC
     entity/transform.hpp
     fiber/exclusive_work_stealing.hpp
     fiber/exclusive_work_stealing_impl.hpp
+    fiber/exclusive_shared_work.hpp
+    fiber/exclusive_shared_work_impl.hpp
+    fiber/yield.hpp
+    fiber/detail/yield.hpp
     ids/generator.hpp
     io/memmap.hpp
     io/memmap.cpp

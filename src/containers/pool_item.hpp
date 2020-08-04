@@ -25,5 +25,5 @@ private:
 
 template <typename T>
 pool_item<T>::pool_item() :
-    _ticket(new ::ticket<T>(reinterpret_cast<T*>(this)))
+    _ticket(nullptr)
 {}

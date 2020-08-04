@@ -50,9 +50,9 @@ class scheme
 public:
     std::tuple<std::add_lvalue_reference_t<vectors>...> components;
 
-    constexpr updater<std::add_pointer_t<vectors>...> make_updater()
+    constexpr updater<std::add_pointer_t<vectors>...> make_updater(bool contiguous_component_execution)
     {
-        return updater<std::add_pointer_t<vectors>...>(components);
+        return updater<std::add_pointer_t<vectors>...>(contiguous_component_execution, components);
     }
 
     template <typename T>
